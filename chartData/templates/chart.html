@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src='https://cdn.plot.ly/plotly-2.4.2.min.js'></script>
+    <title>Document</title>
+</head>
+<body>
+    <!--<div><img src="data:image/png;base64,{{data}}"></div>-->
+    <div id='list'>{{newList2}}</div>
+    <input type='hidden' id='check2' name='check' value='{{ zList }}'>
+    <div id='check'></div>
+    <div>helloworld</div>
+    {% if graph %}
+    {{ graph|safe }}
+    {% else %}
+    <p> No!!!!!!!!!!!!!!! </p>
+    {% endif %}
+    
+    {% if actGraph %}
+    {{ actGraph|safe }}
+    {% else %}
+    <p> No!!!!!!!!!!!!!!! </p>
+    {% endif %}
+</body>
+</html>
