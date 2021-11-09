@@ -1,4 +1,4 @@
-{%load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,20 +6,24 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script type="text/javascript" src="{% static 'startData/startpage.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'startpage.css' %}"/>
+    <script type="text/javascript" src="{% static 'startpage.js' %}"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div>이름을 입력하세요</div>
+    <div id="name">아이디를 입력하세요</div>
     <!--UserName 입력 부분-->
-    <div class="bt">
+    <div>
         <!--UserName을 text로 입력 받고 db에 해당 id가 있는지 확인한다. -->
         <!--submit type인 버튼을 누르면, checkID action으로 전송된 id를 확인한다.-->
-        <form action="startData/checkID" method="get">
+        <form class="button" action="startData/checkID" method="get">
             <input class="bt" type="text" id="userID" name="userID" placeholder="아이디를 입력하세요."/>
             <div id='userName'></div>
-            <input type="submit" value="입력">
+            <div id='nameInput'><input type="submit" value="입력"></div>
         </form>
-        <div>{{user_id}}</div>
+        <div id='noId'>{{user_id}}</div>
     </div>
 </body>
 </html>

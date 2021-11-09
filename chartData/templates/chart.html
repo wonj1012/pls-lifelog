@@ -7,13 +7,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src='https://cdn.plot.ly/plotly-2.4.2.min.js'></script>
     <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'chart.css' %}"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div>@@님의 8월 점수입니다</div>
-    <div>자세한 분석 결과는 버튼을 눌러주세요</div>
+    <div id='name'>{{user_id}}님의 8월 점수입니다</div>
+    <div id='wait'>자세한 분석 결과는 버튼을 눌러주세요</div>
+
+    
+
+
     <div class="bt">
-        <form action="/chartData/details" method="get">
-            <input type="submit" value="분석하기">
+        <form action="/chartData/details1" method="get">
+            <input type="submit" value="활동 정도 분석하기">
+        </form>
+    </div>
+    <div class="bt">
+        <form action="/chartData/details2" method="get">
+            <input type="submit" value="운동 정도 분석하기">
+        </form>
+    </div>
+    <div class="bt">
+        <form action="/chartData/details3" method="get">
+            <input type="submit" value="규칙성 분석하기">
+        </form>
+    </div>
+    <div class="bt">
+        <form action="/chartData/details4" method="get">
+            <input type="submit" value="수면시간 분석하기">
+        </form>
+    </div>
+    <div class="bt">
+        <form action="/chartData/details5" method="get">
+            <input type="submit" value="식사 분석하기">
         </form>
     </div>
 </body>

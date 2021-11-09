@@ -22,7 +22,7 @@ def checkData(request):
     mealData()
     #sooniData()
 
-    return render(request, 'chart.html', {'zList': zList, 'newList2': newList2, 'newList3': newList3, 'graph': graph, 'actGraph' : actGraph, 'sleepGraph': sleepGraph, 'sleepAvg': avg})
+    return render(request, 'chart.html', {'user_id': user_id})
 
 def activeData():
     global zList
@@ -73,8 +73,16 @@ def activeData():
     newList22 = [newList2]
     y_data = np.array(newList22)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', name=labels[0], connectgaps=True,))
+    fig.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', name=labels[0], connectgaps=True,))
     graph = fig.to_html(full_html=False, default_height=500, default_width=700)
+    
+    global graph2
+    x_data2 = np.vstack((np.arange(1, 5),)*4)
+    newList33 = [newList3]
+    y_data2 = np.array(newList33)
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=x_data2[0], y=y_data2[0], mode='lines', line_shape='spline', connectgaps=True,))
+    graph2 = fig2.to_html(full_html=False, default_height=500, default_width=700)
 
 def exerciseData():
     # 2. 운동 정도 분석하기
@@ -220,10 +228,15 @@ def sleepData():
     else:
         labels2 = ['나의 수면 시간']
         x_data = np.vstack((np.arange(1, 32),)*4)
+        
+        for i in range(1, 32):
+            if sleepListVer2[i] == 0:
+                sleepListVer2[i] = None
+        
         sleepListVer22 = [sleepListVer2]
         y_data = np.array(sleepListVer22)
         fig3 = go.Figure()
-        fig3.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', name=labels2[0], connectgaps=True,))
+        fig3.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', name=labels2[0], connectgaps=True,))
         sleepGraph = fig3.to_html(full_html=False, default_height=500, default_width=700)
 
 def mealData():
@@ -271,7 +284,68 @@ def mealData():
                 mealList[i][8] = -1
             elif mealList[i][6] > 1200:
                 mealList[i][8] = 1
+                
+    # 만약 식사 횟수가 30회 중 10회 이하이면 기록 오류
+    # 오류 확인한 뒤 식사 안한 때는 None으로 표시한 후 조식, 중식, 석식 그래프 생성하기
+    notBreakfast = 0
+    breakfastFlag = True
+    notLunch = 0
+    lunchFlag = True
+    notDinner = 0
+    dinnerFlag = True
+    for j in range(1, 32):
+        if mealList[j][1] == 0:
+            notBreakfast += 1
+        if mealList[j][4] == 0:
+            notLunch += 1
+        if mealList[j][7] == 0:
+            notDinner += 1
+            
+    if notBreakfast >= 20:
+        breakfastFlag = False
+    if notLunch >= 20:
+        lunchFlag = False
+    if notDinner >= 20:
+        dinnerFlag = False
+        
+    mealText = ''
+    if breakfastFlag == False or lunchFlag == False or dinnerFlag == False:
+        mealText = '정보가 부족하여 분석이 불가합니다'
 
+    global mealGraph
+    x_data = np.vstack((np.arange(1, 32),)*4)
+    
+    mealBreakfast = [0 for i in range(32)]
+    mealLunch = [0 for i in range(32)]
+    mealDinner = [0 for i in range(32)]
+    for i in range(0, 32):
+        if mealList[i][1] == 0:
+            mealBreakfast[i] = None
+        else:
+            mealBreakfast[i] = mealList[i][0] / 60  
+    
+        if mealList[i][4] == 0:
+            mealLunch[i] = None
+        else:
+            mealLunch[i] = mealList[i][3] / 60    
+            
+        if mealList[i][7] == 0:
+            mealDinner[i] = None
+        else:
+            mealDinner[i] = mealList[i][6] / 60    
+    
+    mealBreakfast2 = [mealBreakfast]
+    mealLunch2 = [mealLunch]
+    mealDinner2 = [mealDinner]
+    y_data1 = np.array(mealBreakfast2)
+    y_data2 = np.array(mealLunch2)
+    y_data3 = np.array(mealDinner2)
+    fig4 = go.Figure()
+    fig4.add_trace(go.Scatter(x=x_data[0], y=y_data1[0], mode='lines', line_shape='spline', name='breakfast', connectgaps=True,))
+    fig4.add_trace(go.Scatter(x=x_data[0], y=y_data2[0], mode='lines', line_shape='spline', name='lunch', connectgaps=True,))
+    fig4.add_trace(go.Scatter(x=x_data[0], y=y_data3[0], mode='lines', line_shape='spline', name='dinner', connectgaps=True,))
+    mealGraph = fig4.to_html(full_html=False, default_height=500, default_width=700)
+    
 def sooniData():
     # 6. 순이 분석
     # 한 달 동안 대화 횟수 기록하기 (막대 그래프로 나타내기)
@@ -287,6 +361,22 @@ def sooniData():
         sooniList[dateNum] += 1
         text =  text + ' ' + row['Message_1']
 
-def details(request):
+def details1(request):
     
-    return render(request, 'details.html', {'zList': zList, 'newList2': newList2, 'newList3': newList3, 'graph': graph, 'actGraph' : actGraph, 'sleepGraph': sleepGraph, 'sleepAvg': avg, 'mealList': mealList})
+    return render(request, 'details1.html', {'graph': graph, 'graph2': graph2})
+
+def details2(request):
+    
+    return render(request, 'details2.html', {'actGraph' : actGraph})
+
+def details3(request):
+    
+    return render(request, 'details3.html', {'actGraph' : actGraph})
+
+def details4(request):
+    
+    return render(request, 'details4.html', {'sleepGraph' : sleepGraph})
+
+def details5(request):
+    
+    return render(request, 'details5.html', {'mealGraph' : mealGraph})

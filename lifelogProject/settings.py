@@ -21,8 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-#SECRET_KEY = 'django-insecure-71-jr&fdno3%j6cmi%)&8wosb4xb89i#l=*x^4jbpz(i&nuc%r'
-SECRET_KEY = my_settings.SECRET_KEY
+SECRET_KEY = 'django-insecure-71-jr&fdno3%j6cmi%)&8wosb4xb89i#l=*x^4jbpz(i&nuc%r'
+#SECRET_KEY = my_settings.SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -77,13 +77,13 @@ WSGI_APPLICATION = 'lifelogProject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#    }
-#}
-DATABASES = my_settings.DATABASES
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+#DATABASES = my_settings.DATABASES
 
 
 # Password validation
