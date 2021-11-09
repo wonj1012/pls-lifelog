@@ -13,6 +13,7 @@
         <!--submit type인 버튼을 누르면, 해당 id의 data를 분석한다.-->
         <form action="/chartData/checkData" method="get">
             <input type="submit" value="분석하기">
+            <input type="hidden" id="getId" name="getId" value={{user_id}}>
         </form>
         <div>{{user_id}}</div>
     </div>

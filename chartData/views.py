@@ -12,6 +12,9 @@ import time
 # 해당 id의 data 분석
 def checkData(request):
     
+    global user_id
+    user_id = str(request.GET.get('getId'))
+    
     activeData()
     exerciseData()
     regularData()
@@ -24,7 +27,6 @@ def checkData(request):
 def activeData():
     global zList
     zList = [[0] * 12 for row in range(32)]
-    user_id = '228'
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         dateNum = int(row['Time'][9:11])
@@ -83,7 +85,6 @@ def exerciseData():
     global actNumWeek, actNumMonth, actGraph
     actNumWeek = [0, 0, 0, 0, 0]
     
-    user_id = '228'
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         if (row['State'] == '실외운동하기') or (row['State'] == '실내운동하기'):
@@ -118,7 +119,6 @@ def regularData():
     # z에서 '약', act에서 '용변' 검색 가능
     # 만약 '약', '용변' 횟수가 0회라면 아예 분석 x => 규칙성 점수 0점 처리
     
-    user_id = '315'
     # csv 파일 dataframe 객체로 읽어오기
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     toilet_times = []
@@ -189,7 +189,6 @@ def sleepData():
     global sleepList
     sleepList = [0 for i in range(32)]
     
-    user_id = '228'
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         if row['Act'] == '취침':
@@ -243,7 +242,6 @@ def mealData():
     global mealList
     mealList= [[0] * 9 for row in range(32)]
     
-    user_id = '228'
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         dateNum = int(row['Time'][9:11])
@@ -282,7 +280,6 @@ def sooniData():
     # 한 달 간 순이 대화 횟수 list
     sooniList = [0 for i in range(32)]
     text = ''
-    user_id = '228'
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         if row['Message_1'] != "" or row['Message_2'] != "" or row['Message_3'] != "":
