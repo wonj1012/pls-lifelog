@@ -17,9 +17,11 @@ from django.contrib import admin
 from django.urls import path
 from django.urls.conf import include
 from startData import views as v1
+from chartData import views as v2
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', v1.main),
-    path('startData/', include('startData.urls'))
+    path('startData/', include('startData.urls')),
+    path('chartData/', include('chartData.urls'))
 ]

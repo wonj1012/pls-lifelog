@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from .models import UserProfile
-from .models import Hs228M0809031355
 from django.db.models import Q
 
 # 기본 페이지

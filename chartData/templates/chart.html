@@ -9,21 +9,12 @@
     <title>Document</title>
 </head>
 <body>
-    <!--<div><img src="data:image/png;base64,{{data}}"></div>-->
-    <div id='list'>{{newList2}}</div>
-    <input type='hidden' id='check2' name='check' value='{{ zList }}'>
-    <div id='check'></div>
-    <div>helloworld</div>
-    {% if graph %}
-    {{ graph|safe }}
-    {% else %}
-    <p> No!!!!!!!!!!!!!!! </p>
-    {% endif %}
-    
-    {% if actGraph %}
-    {{ actGraph|safe }}
-    {% else %}
-    <p> No!!!!!!!!!!!!!!! </p>
-    {% endif %}
+    <div>@@님의 8월 점수입니다</div>
+    <div>자세한 분석 결과는 버튼을 눌러주세요</div>
+    <div class="bt">
+        <form action="/chartData/details" method="get">
+            <input type="submit" value="분석하기">
+        </form>
+    </div>
 </body>
 </html>
