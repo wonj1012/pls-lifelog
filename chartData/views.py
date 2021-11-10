@@ -145,8 +145,6 @@ def regularData():
     except FileNotFoundError:
         df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     toilet_times = []
-    toilet_times_sec = []
-    toilet_times_time_sec = []
 
     # 용변 시간 리스트에 저장
     for index, row in df.iterrows():
@@ -154,11 +152,9 @@ def regularData():
             try:
                 ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
             except IndexError:
-                return -1
+                break
             if (ttime not in toilet_times):
                 toilet_times.append(ttime)
-                toilet_times_sec.append(time.mktime(ttime.timetuple()))
-                toilet_times_time_sec.append(ttime.time().hour * 3600 + ttime.time().minute * 60 + ttime.time().second)
         end_index = index
 
     # 데이터 시작 시간, 끝 시간
@@ -180,6 +176,7 @@ def regularData():
     toilet_data = go.Scatter(x=list(toilet_times_dict.keys()), y=list(toilet_times_dict.values()))
     toilet_fig = go.Figure()
     toilet_fig.add_trace(toilet_data)
+    toilet_fig.to_html(full_html=False, default_height=500, default_width=700)
 
     # 시간대별 용변 
     # toilet_timezone[0], [1], [2], [3] = 0~6시, 6~12시, 12시~18시, 18시~24시
@@ -200,16 +197,23 @@ def regularData():
     toilet_timezone_data = go.Scatter(x=['새벽 (0시 ~ 6시)', '아침 (6시 ~ 12시)', '점심 (12시 ~ 18시)', '저녁 (18시 ~ 24시)'], y=toilet_timezone)
     toilet_timezone_fig = go.Figure()
     toilet_timezone_fig.add_trace(toilet_timezone_data)
+    toilet_timezone_fig.to_html(full_html=False, default_height=500, default_width=700)
 
     # 일 평균 용변 횟수
     try:
         average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
     except ZeroDivisionError:
         average_toilet_time = 0
-    # 용변시간 표준편차
-    std_toilet_time = np.std(toilet_times_sec)
-    # 일중 용변시간 표준편차
-    std_toilet_time_inday = np.std(toilet_times_time_sec)
+    
+    # 표준편차 등수 확인
+    rank_df = pd.read_csv('toilet_rank.csv', index_col=0)
+    for index, row in rank_df.iterrows():
+        if(index == int(user_id)):
+            score = (row['rank']) # 점수
+            rank_found = True
+            break
+    if (not rank_found):
+        score = 0 # No data
 
 def sleepData():
     # 4. 수면시간 분석하기
