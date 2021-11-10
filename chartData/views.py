@@ -272,7 +272,7 @@ def regularData():
     medicine_miss_num = [0, 0, 0, 0]
     for date, nums in medicine_date_num.items():
         for time_zone in range(4):
-            if (nums[time_zone] < average_medicine_num[time_zone]):
+            if (nums[time_zone] < round(average_medicine_num[time_zone])):
                 medicine_miss_num[time_zone] += 1
 
 def sleepData():
