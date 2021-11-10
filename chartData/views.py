@@ -33,7 +33,10 @@ def checkData(request):
 def activeData():
     global zList
     zList = [[0] * 12 for row in range(32)]
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     for index, row in df.iterrows():
         dateNum = int(row['Time'][9:11])
         timeNum = int(int(row['Time'][12:14]) / 2)
@@ -99,7 +102,10 @@ def exerciseData():
     global actNumWeek, actNumMonth, actGraph
     actNumWeek = [0, 0, 0, 0, 0]
     
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     for index, row in df.iterrows():
         if (row['State'] == '실외운동하기') or (row['State'] == '실내운동하기'):
             if int(row['Time'][9:11]) <= 7:
@@ -134,41 +140,34 @@ def regularData():
     # 만약 '약', '용변' 횟수가 0회라면 아예 분석 x => 규칙성 점수 0점 처리
     
     # csv 파일 dataframe 객체로 읽어오기
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     toilet_times = []
     toilet_times_sec = []
+    toilet_times_time_sec = []
 
     # 용변 시간 리스트에 저장
     for index, row in df.iterrows():
         if ('용변' in row['Act']):
-            ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+            try:
+                ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+            except IndexError:
+                return -1
             if (ttime not in toilet_times):
                 toilet_times.append(ttime)
                 toilet_times_sec.append(time.mktime(ttime.timetuple()))
+                toilet_times_time_sec.append(ttime.time().hour * 3600 + ttime.time().minute * 60 + ttime.time().second)
         end_index = index
 
-    # 기록된 첫 시간, 마지막 시간
-    start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
-    end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
-    # 일 평균 용변 횟수
-    average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
-    # print(round(average_toilet_time, 4))
-    # 용변 표준편차
-    std_toilet_time = np.std(toilet_times_sec)
-    # print(std_toilet_time)
+    # 데이터 시작 시간, 끝 시간
+    try:
+        start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
+        end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
+    except IndexError:
+        return -1
 
-    # # index: 용변 시간 column: 용변 횟수 dataframe 형성
-    # temp = start_time.date()
-    # times_list = []
-    # while (temp != end_time.date()):
-    #     times_list.append(temp)
-    #     temp += dt.timedelta(days=1)
-    # times_list.append(temp)
-    # toilet_times_df = pd.DataFrame({'times': 0}, index=times_list)
-    # for t in toilet_times:
-    #     toilet_times_df['times'][t.date()] += 1
-    # print(toilet_times_df)
-    # {용변 시간: 용변 횟수} dictionary 생성
     toilet_times_dict = {}
     temp = start_time.date()
     while (temp != end_time.date()):
@@ -182,12 +181,35 @@ def regularData():
     toilet_fig = go.Figure()
     toilet_fig.add_trace(toilet_data)
 
-    # 새벽 용변 횟수
-    dusk_toilet_times = []
+    # 시간대별 용변 
+    # toilet_timezone[0], [1], [2], [3] = 0~6시, 6~12시, 12시~18시, 18시~24시
+    toilet_timezone = [0, 0, 0, 0] 
     for t in toilet_times:
-        if (dt.time(0, 0, 0) <= t.time() <= dt.time(6, 0, 0)):
-            dusk_toilet_times.append(t)
-    print(dusk_toilet_times)
+        # 새벽
+        if (dt.time(0, 0, 0) <= t.time() < dt.time(6, 0, 0)):
+            toilet_timezone[0] += 1
+        # 아침
+        elif (dt.time(6, 0, 0) <= t.time() < dt.time(12, 0, 0)):
+            toilet_timezone[1] += 1
+        # 점심
+        elif (dt.time(12, 0, 0) <= t.time() < dt.time(18, 0, 0)):
+            toilet_timezone[2] += 1
+        # 저녁
+        else:
+            toilet_timezone[3] += 1
+    toilet_timezone_data = go.Scatter(x=['새벽 (0시 ~ 6시)', '아침 (6시 ~ 12시)', '점심 (12시 ~ 18시)', '저녁 (18시 ~ 24시)'], y=toilet_timezone)
+    toilet_timezone_fig = go.Figure()
+    toilet_timezone_fig.add_trace(toilet_timezone_data)
+
+    # 일 평균 용변 횟수
+    try:
+        average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
+    except ZeroDivisionError:
+        average_toilet_time = 0
+    # 용변시간 표준편차
+    std_toilet_time = np.std(toilet_times_sec)
+    # 일중 용변시간 표준편차
+    std_toilet_time_inday = np.std(toilet_times_time_sec)
 
 def sleepData():
     # 4. 수면시간 분석하기
@@ -203,7 +225,10 @@ def sleepData():
     global sleepList
     sleepList = [0 for i in range(32)]
     
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     for index, row in df.iterrows():
         if row['Act'] == '취침':
             dateNum = int(row['Time'][9:11])
@@ -261,7 +286,10 @@ def mealData():
     global mealList
     mealList= [[0] * 9 for row in range(32)]
     
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     for index, row in df.iterrows():
         dateNum = int(row['Time'][9:11])
         if row['State'] == '조식':
@@ -360,7 +388,10 @@ def sooniData():
     # 한 달 간 순이 대화 횟수 list
     sooniList = [0 for i in range(32)]
     text = ''
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     for index, row in df.iterrows():
         mg1 = row['Message_1']
         mg2 = row['Message_2']
@@ -397,7 +428,10 @@ def sooniData():
   
 def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1):
     
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
     
     # 각 점수는 최대 100점. 가중치를 곱해서 총점을 가중평균
     def getScoreAct():
