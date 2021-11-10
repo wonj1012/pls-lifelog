@@ -24,7 +24,6 @@ def checkData(request):
     sooniData()
     
     fullScore = round(getScore(1,1,1,1,1,0.1), 2)
-    print(fullArr)
 
     return render(request, 'chart.html', {'user_id': user_id, 'fullScore': fullScore, 'fullArr': fullArr})
 
@@ -208,6 +207,73 @@ def regularData():
         average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
     except ZeroDivisionError:
         average_toilet_time = 0
+
+    medicine_times = []
+    for index, row in df.iterrows():
+        if ('약' in row['Z']):
+            try:
+                mtime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+            except IndexError:
+                break
+            if (mtime not in medicine_times):
+                medicine_times.append(mtime)
+        end_index = index
+
+    # 시간대별 복약 날짜 리스트
+    # medicine_timezone[0], [1], [2], [3] = 22~4시, 4~10시, 10시~16시, 16시~22시
+    medicine_timezone = [[], [], [], []] 
+    for t in medicine_times:
+        # 밤
+        if (dt.time(16, 0, 0) <= t.time() < dt.time(22, 0, 0)):
+            medicine_timezone[3].append(t.date())
+        # 아침
+        elif (dt.time(4, 0, 0) <= t.time() < dt.time(10, 0, 0)):
+            medicine_timezone[1].append(t.date())
+        # 점심
+        elif (dt.time(10, 0, 0) <= t.time() < dt.time(16, 0, 0)):
+            medicine_timezone[2].append(t.date())
+        # 저녁
+        else:
+            medicine_timezone[0].append(t.date())
+
+    start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
+    end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
+
+    # 일 평균 시간대별 약 복용 횟수
+    global average_medicine_num
+    average_medicine_num = [0, 0, 0, 0]
+    for i in range(4):
+        average_medicine_num[i] = len(medicine_timezone[i]) / (end_time.date() - start_time.date()).days
+
+    # 날짜, 시간대별 약 복용 횟수 (key: 날짜, value: [밤에 복용한 횟수, 아침에 복용한 횟수, 점심에 복용한 횟수, 저녁에 복용한 횟수])
+    medicine_date_num = {}
+    temp = start_time.date()
+    while (temp <= end_time.date()):
+        medicine_date_num[temp] = [0, 0, 0, 0]
+        for i in range(4):
+            if (temp in medicine_timezone[i]):
+                medicine_date_num[temp][i] += 1
+        temp += dt.timedelta(days=1)
+
+    medicine_data_values = [[], [], [], []]
+    for i in range(4):
+        for val in medicine_date_num.values():
+            medicine_data_values[i].append(val[i])
+
+    global medicine_fig, medicineGraph
+
+    medicine_fig = go.Figure()
+    for i in range(4):
+        medicine_fig.add_trace(go.Scatter(x=list(medicine_date_num.keys()), y=medicine_data_values[i], mode='lines', line_shape='spline', name='breakfast', connectgaps=True,))
+    medicineGraph = medicine_fig.to_html(full_html=False, default_height=500, default_width=700)
+    
+    # 약 복용 하지 않은 날
+    global medicine_miss_num
+    medicine_miss_num = [0, 0, 0, 0]
+    for date, nums in medicine_date_num.items():
+        for time_zone in range(4):
+            if (nums[time_zone] < average_medicine_num[time_zone]):
+                medicine_miss_num[time_zone] += 1
 
 def sleepData():
     # 4. 수면시간 분석하기
@@ -603,7 +669,45 @@ def details2(request):
     return render(request, 'details2.html', {'actGraph' : actGraph, 'actZeroNum': actZeroNum, 'actText': actText, 'actNum': actNum, 'actAvg': actAvg, 'actText2': actText2, 'actSub': actSub})
 
 def details3(request):
-    return render(request, 'details3.html', {'toiletGraph' : toiletGraph, 'toiletGraph2': toiletGraph2, 'average_toilet_time': average_toilet_time, 'score': score})
+    if (average_toilet_time < 0.5):
+        regText1 = '변 보는 주기가 너무 길어요. 물을 많이 마시면 변을 더 잘 볼 수 있어요!'
+    elif (average_toilet_time > 2):
+        regText1 = '변 보는 주기가 너무 짧아요. 기름기 있는 음식과 찬물은 소화에 좋지 않답니다!'
+    else:
+        regText1 = '변 보는 주기가 정상입니다. 현재 습관을 유지해주세요!'
+    
+    if (score < 40):
+        regText2 = '변을 보는 시간이 규칙적이에요. 현재 습관을 유지해주세요!'
+    elif (40 <= score):
+        regText2 = '변을 보는 시간이 규칙적이지 않아요. 유산균은 드시면 도움이 되실 거에요!'
+    
+    taking_medicine = False
+    regText3, regText4, regText5, regText6 = '', '', '', ''
+    if (average_medicine_num[0] >= 0.5):
+        regText3 = '밤에 약을 복용하고 계시네요.'
+        taking_medicine = True
+    if (average_medicine_num[1] >= 0.5):
+        regText4 = '아침에 약을 복용하고 계시네요.'
+        taking_medicine = True
+    if (average_medicine_num[2] >= 0.5):
+        regText5 = '점심에 약을 복용하고 계시네요.'
+        taking_medicine = True
+    if (average_medicine_num[3] >= 0.5):
+        regText6 = '저녁에 약을 복용하고 계시네요.'
+        taking_medicine = True
+
+    total_miss = 0
+    for i in medicine_miss_num:
+        total_miss += i
+    if (taking_medicine and total_miss < 0):
+        regText7 = '매일 약을 빼놓지 않고 드셨네요. 현재 습관을 유지해주세요!'
+    elif(taking_medicine):
+        regText7 = '약을 ' + str(total_miss) + '회 복용하지 않으셨네요. 건강을 위해 약은 빼먹지 말고 꼭 챙겨주세요!'
+    else:
+        regText7 = '약을 복용하지 않고 계시네요.'
+
+    return render(request, 'details3.html', {'toiletGraph' : toiletGraph, 'toiletGraph2': toiletGraph2, 'medicineGraph': medicineGraph, 'average_toilet_time': average_toilet_time, 'score': score, 
+    'regText1': regText1, 'regText2': regText2, 'regText3': regText3, 'regText4': regText4, 'regText5': regText5, 'regText6': regText6, 'regText7': regText7})    
 
 def details4(request):
     sleepLateNum = 0
@@ -708,7 +812,6 @@ def preprocess():
         t_times = [] # 용변 시간 리스트
         t_times_sec = [] # 용변 시간 초로 변환한 리스트
         t_times_time_sec = [] # 용변 시간 날짜 제외하고 초로 변환한 리스트
-        # print(u_id)
         for index, row in df.iterrows():
             if ('용변' in row['Act']):
                 try:
@@ -727,12 +830,10 @@ def preprocess():
             end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
             # 일 평균 용변 횟수
             average_t_time = len(t_times) / (end_time.date() - start_time.date()).days
-            # print(round(average_toilet_time, 4))
             # 용변시간 표준편차
             t_time_std = np.std(t_times_sec)
             # 일중 용변시간 표준편차
             t_time_inday_std = np.std(t_times_time_sec)
-            # print(t_time_std, t_time_inday_std)
             if (not np.isnan(t_time_std) and not np.isnan(t_time_inday_std)):
                 t_time_std_list.append((t_time_std, u_id))
                 t_time_std_inday_list.append((t_time_inday_std, u_id))
