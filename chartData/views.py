@@ -236,9 +236,6 @@ def regularData():
         # 저녁
         else:
             medicine_timezone[0].append(t.date())
-    medicine_timezone_data = go.Scatter(x=['밤 (22~4시)', '아침 (4~10시)', '점심 (10시~16시)', '저녁 (16시~22시)'], y=medicine_timezone)
-    medicine_timezone_fig = go.Figure()
-    medicine_timezone_fig.add_trace(medicine_timezone_data)
 
     start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
     end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
@@ -259,6 +256,18 @@ def regularData():
                 medicine_date_num[temp][i] += 1
         temp += dt.timedelta(days=1)
 
+    medicine_data_values = [[], [], [], []]
+    for i in range(4):
+        for val in medicine_date_num.values():
+            medicine_data_values[i].append(val[i])
+
+    global medicine_fig, medicineGraph
+
+    medicine_fig = go.Figure()
+    for i in range(4):
+        medicine_fig.add_trace(go.Scatter(x=list(medicine_date_num.keys()), y=medicine_data_values[i], mode='lines', line_shape='spline', name='breakfast', connectgaps=True,))
+    medicineGraph = medicine_fig.to_html(full_html=False, default_height=500, default_width=700)
+    
     # 약 복용 하지 않은 날
     global medicine_miss_num
     medicine_miss_num = [0, 0, 0, 0]
@@ -663,7 +672,7 @@ def details3(request):
     if (average_toilet_time < 0.5):
         regText1 = '변 보는 주기가 너무 길어요. 물을 많이 마시면 변을 더 잘 볼 수 있어요!'
     elif (average_toilet_time > 2):
-        regText1 = '변 보는 주기가 너무 짧아요. 기름기 있는 음식과 찬물을 피해주세요!'
+        regText1 = '변 보는 주기가 너무 짧아요. 기름기 있는 음식과 찬물은 소화에 좋지 않답니다!'
     else:
         regText1 = '변 보는 주기가 정상입니다. 현재 습관을 유지해주세요!'
     
@@ -697,7 +706,7 @@ def details3(request):
     else:
         regText7 = '약을 복용하지 않고 계시네요.'
 
-    return render(request, 'details3.html', {'toiletGraph' : toiletGraph, 'toiletGraph2': toiletGraph2, 'average_toilet_time': average_toilet_time, 'score': score, 
+    return render(request, 'details3.html', {'toiletGraph' : toiletGraph, 'toiletGraph2': toiletGraph2, 'medicineGraph': medicineGraph, 'average_toilet_time': average_toilet_time, 'score': score, 
     'regText1': regText1, 'regText2': regText2, 'regText3': regText3, 'regText4': regText4, 'regText5': regText5, 'regText6': regText6, 'regText7': regText7})
 
 def details4(request):
