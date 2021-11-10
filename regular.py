@@ -9,9 +9,9 @@ import time
 # user_id = '315'
 # csv 파일 dataframe 객체로 읽어오기
 try:
-    df = pd.read_csv('hs_g73_m08/hs_' + u_id + '_m08_0903_1355.csv', encoding='ANSI')
+    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
 except FileNotFoundError:
-    df = pd.read_csv('hs_g73_m08/hs_' + u_id + '_m08_0903_1356.csv', encoding='ANSI')
+    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
 toilet_times = []
 toilet_times_sec = []
 toilet_times_time_sec = []
