@@ -19,7 +19,7 @@ for index, row in profile_df.iterrows():
     t_times = [] # 용변 시간 리스트
     t_times_sec = [] # 용변 시간 초로 변환한 리스트
     t_times_time_sec = [] # 용변 시간 날짜 제외하고 초로 변환한 리스트
-    print(u_id)
+    # print(u_id)
     for index, row in df.iterrows():
         if ('용변' in row['Act']):
             try:
@@ -43,12 +43,35 @@ for index, row in profile_df.iterrows():
         t_time_std = np.std(t_times_sec)
         # 일중 용변시간 표준편차
         t_time_inday_std = np.std(t_times_time_sec)
-        print(t_time_std, t_time_inday_std)
+        # print(t_time_std, t_time_inday_std)
         if (not np.isnan(t_time_std) and not np.isnan(t_time_inday_std)):
-            t_time_std_list.append(t_time_std)
-            t_time_std_inday_list.append(t_time_inday_std)
+            t_time_std_list.append((t_time_std, u_id))
+            t_time_std_inday_list.append((t_time_inday_std, u_id))
     except IndexError:
         continue
     except ZeroDivisionError:
         continue
-    
+    except RuntimeError:
+        continue
+std_sorted = sorted(t_time_std_list)
+std_idx = []
+for i in t_time_std_list:
+    std_idx.append(std_sorted.index(i))
+std_rank = {}
+for i in t_time_std_list:
+    std_rank[i[1]] = std_idx[t_time_std_list.index(i)] / len(t_time_std_list) * 100
+
+std_inday_sorted = sorted(t_time_std_inday_list)
+std_inday_idx = []
+for i in t_time_std_inday_list:
+    std_inday_idx.append(std_inday_sorted.index(i))
+std_inday_rank = {}
+for i in t_time_std_inday_list:
+    std_inday_rank[i[1]] = std_inday_idx[t_time_std_inday_list.index(i)] / len(t_time_std_inday_list) * 100
+
+total_std_rank = {}
+for i, j in std_inday_rank.items():
+    total_std_rank[i] = round((j + std_inday_rank[i]) / 2, 2)
+df_std = pd.DataFrame(total_std_rank, index=['rank'])
+df_std = df_std.transpose()
+df_std.to_csv('toilet_rank.csv')
