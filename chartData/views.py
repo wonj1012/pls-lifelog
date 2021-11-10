@@ -240,7 +240,11 @@ def sleepData():
     
     # 평균 취침 시간
     global avg
-    avg = sum / sleepNum
+    
+    if sleepNum == 0:
+        avg = 0
+    else:
+        avg = sum / sleepNum
              
     # 한 달 동안 취침 시간 나타낸 list (단, 0~24의 범위로)
     global sleepListVer2
@@ -249,21 +253,18 @@ def sleepData():
         sleepListVer2[k] = sleepList[k] / 60
     
     global sleepGraph
-    if sum == 0:
-        sleepGraph = '수면 기록이 없습니다'
-    else:
-        labels2 = ['나의 수면 시간']
-        x_data = np.vstack((np.arange(1, 32),)*4)
-        
-        for i in range(0, 32):
-            if sleepListVer2[i] == 0:
-                sleepListVer2[i] = None
-        
-        sleepListVer22 = [sleepListVer2]
-        y_data = np.array(sleepListVer22)
-        fig3 = go.Figure()
-        fig3.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', name=labels2[0], connectgaps=True,))
-        sleepGraph = fig3.to_html(full_html=False, default_height=500, default_width=700)
+    labels2 = ['나의 수면 시간']
+    x_data = np.vstack((np.arange(1, 32),)*4)
+    
+    for i in range(0, 32):
+        if sleepListVer2[i] == 0:
+            sleepListVer2[i] = None
+    
+    sleepListVer22 = [sleepListVer2]
+    y_data = np.array(sleepListVer22)
+    fig3 = go.Figure()
+    fig3.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', name=labels2[0], connectgaps=True,))
+    sleepGraph = fig3.to_html(full_html=False, default_height=500, default_width=700)
 
 def mealData():
     # 5. 식사 시간 분석
@@ -660,7 +661,7 @@ def details6(request):
     elif sooniZeroNum <= 21:
         sooniText = '순이와 대화 횟수가 너무 적어요!'
     else:
-        sooniText = '한 번도 순이와 대화하지 않으셨네요! 인공지능 대화 서비스 순이와 대화 해보세요!'
+        sooniText = '순이와 거의 대화하지 않으셨네요! 인공지능 대화 서비스 순이와 대화 해보세요!'
         
     path = './hs_g73_m08/'
     file_list = os.listdir(path)
