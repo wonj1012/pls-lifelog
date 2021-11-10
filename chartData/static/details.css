@@ -29,3 +29,22 @@ body {
 #graph {
     position: absolute;
 }
+
+.title {
+    color: #435D74;
+    font-size: 35px;
+    padding-left: 30px;    
+}
+
+.smallText {
+    color: #435D74;
+    font-size: 20px;
+    padding-left: 30px;
+}
+
+.warningText {
+    color: #435D74;
+    font-size: 20px;
+    padding-left: 30px;
+    padding-bottom: 50px;
+}

@@ -8,9 +8,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import datetime as dt
 import time
-from wordcloud import WordCloud
-from konlpy.tag import Twitter
-from collections import Counter
 
 # 해당 id의 data 분석
 def checkData(request):
@@ -23,7 +20,7 @@ def checkData(request):
     regularData()
     sleepData()
     mealData()
-    #sooniData()
+    sooniData()
     
     fullScore = round(getScore(1,1,1,1,1,0.1), 2)
     print(fullArr)
@@ -93,8 +90,6 @@ def activeData():
 def exerciseData():
     # 2. 운동 정도 분석하기
     # Act에서 '실외운동', '실내운동' 횟수 계산
-    # '실외운동', '실내운동'이면 (다음 시각) - (이전 시각)으로 운동 시간 계산
-    # 운동시간은 주중 몇 시간인지만 제공하기 (..복잡해..ㅠㅠ)
 
     global actNumWeek, actNumMonth, actGraph
     actNumWeek = [0, 0, 0, 0, 0]
@@ -358,8 +353,8 @@ def sooniData():
     # 대화 text를 하나의 string으로 합치고 이를 wordcloud 라이브러리로 표시하기
 
     # 한 달 간 순이 대화 횟수 list
+    global sooniList
     sooniList = [0 for i in range(32)]
-    text = ''
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
         mg1 = row['Message_1']
@@ -368,32 +363,23 @@ def sooniData():
         if pd.isna(mg1) == False:
             dateNum = int(row['Time'][9:11])
             sooniList[dateNum] += 1
-            text += mg1
         if pd.isna(mg2) == False:
             dateNum = int(row['Time'][9:11])
             sooniList[dateNum] += 1
-            text += mg2
         if pd.isna(mg3) == False:
             dateNum = int(row['Time'][9:11])
             sooniList[dateNum] += 1
-            text += mg3
+    
+    del sooniList[0]
+    
+    global sooniGraph
+    x_data = np.vstack((np.arange(1, 32),)*4)
+    sooniList2 = [sooniList]
+    y_data = np.array(sooniList2)
+    fig5 = go.Figure()
+    fig5.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', connectgaps=True,))
+    sooniGraph = fig5.to_html(full_html=False, default_height=500, default_width=700)
             
-    twitter = Twitter()
-    sentences_tag = []
-    sentences_tag = twitter.pos(text)
-    
-    noun_adj_list = []
-    
-    for word, tag in sentences_tag:
-        if tag in ['Noun', 'Adjective']:
-            noun_adj_list.append(word)
-    
-    counts = Counter(noun_adj_list)
-    tags = counts.most_common(40)
-    
-    wc = WordCloud(font_path='malgun.ttf', background_color="white", max_font_size=60)
-    cloud = wc.generate_from_frequencies(dict(tags))
-    cloud.to_file('test.jpg')
   
 def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1):
     
@@ -536,16 +522,61 @@ def details1(request):
     return render(request, 'details1.html', {'graph': graph, 'graph2': graph2})
 
 def details2(request):
-    return render(request, 'details2.html', {'actGraph' : actGraph})
+    actZeroNum = 0
+    for i in range(0, 5):
+        if actNumWeek[i] == 0:
+            actZeroNum += 1
+    
+    actText = ''
+    if actZeroNum == 0:
+        actText = '이용자님은 매주 꾸준히 운동을 하셨네요!'
+    elif actZeroNum < 3:
+        actText = '조금만 더 주간 운동량을 늘려주세요!'
+    elif actZeroNum < 5:
+        actText = '운동량이 너무 적어요!'
+    elif actZeroNum == 5:
+        actText = '한 달 동안 운동을 쉬시면 건강에 좋지 않답니다.'
+    
+    return render(request, 'details2.html', {'actGraph' : actGraph, 'actZeroNum': actZeroNum, 'actText': actText})
 
 def details3(request):
     return render(request, 'details3.html', {'actGraph' : actGraph})
 
 def details4(request):
-    return render(request, 'details4.html', {'sleepGraph' : sleepGraph})
+    sleepLateNum = 0
+    for i in range(0, 32):
+        if sleepListVer2[i] != None and sleepListVer2[i] <= 10:
+            sleepLateNum += 1
+    
+    sleepText = ''
+    if sleepLateNum == 0:
+        sleepText = '매일 꾸준히 일찍 주무셨네요!'
+    elif sleepLateNum <= 7:
+        sleepText = '조금만 더 일찍 자는 날을 늘려주세요!'
+    elif sleepLateNum <= 21:
+        sleepText = '앞으로는 일찍 자는 날을 많이 늘려주세요!'
+    else:
+        sleepText = '수면 리듬이 깨지면 건강에 좋지 않답니다.'
+    
+    return render(request, 'details4.html', {'sleepGraph' : sleepGraph, 'sleepText': sleepText, 'sleepLateNum': sleepLateNum})
 
 def details5(request):
     return render(request, 'details5.html', {'mealGraph' : mealGraph})
 
 def details6(request):
-    return render(request, 'details6.html', {'mealGraph' : mealGraph})
+    sooniZeroNum = 0
+    for i in range(0, 31):
+        if sooniList[i] == 0:
+            sooniZeroNum += 1
+    
+    sooniText = ''
+    if sooniZeroNum == 0:
+        sooniText = '앞으로도 순이와 매일매일 대화해주세요!'
+    elif sooniZeroNum <= 7:
+        sooniText = '조금만 더 순이와 대화해주세요!'
+    elif sooniZeroNum <= 21:
+        sooniText = '순이와 대화 횟수가 너무 적어요!'
+    else:
+        sooniText = '한 번도 순이와 대화하지 않으셨네요! 인공지능 대화 서비스 순이와 대화 해보세요!'
+        
+    return render(request, 'details6.html', {'sooniGraph' : sooniGraph, 'sooniText': sooniText, 'sooniZeroNum': sooniZeroNum})

@@ -16,7 +16,11 @@
 <body>
     <div id='paper'>
         <p class='titleText'>4. 수면시간 분석</p>
+        <p class='title'>일간 수면시간 그래프</p>
+        <p class='smallText'>이용자님은 {{sleepLateNum}}일 늦게 주무셨네요.</p>
+        <p class='smallText'>{{sleepText}}</p>
         {{sleepGraph|safe}}
+        <p class='warningText'>*일간 수면시간 그래프에서 0인 날은 이용자님의 수면 기록이 없기 때문입니다.</p>
     </div>
 </body>
 </html>
