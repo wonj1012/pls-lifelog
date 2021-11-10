@@ -8,6 +8,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 import datetime as dt
 import time
+from wordcloud import WordCloud
+from konlpy.tag import Twitter
+from collections import Counter
 
 # 해당 id의 data 분석
 def checkData(request):
@@ -21,8 +24,11 @@ def checkData(request):
     sleepData()
     mealData()
     #sooniData()
+    
+    fullScore = round(getScore(1,1,1,1,1,0.1), 2)
+    print(fullArr)
 
-    return render(request, 'chart.html', {'user_id': user_id})
+    return render(request, 'chart.html', {'user_id': user_id, 'fullScore': fullScore, 'fullArr': fullArr})
 
 def activeData():
     global zList
@@ -229,7 +235,7 @@ def sleepData():
         labels2 = ['나의 수면 시간']
         x_data = np.vstack((np.arange(1, 32),)*4)
         
-        for i in range(1, 32):
+        for i in range(0, 32):
             if sleepListVer2[i] == 0:
                 sleepListVer2[i] = None
         
@@ -356,27 +362,190 @@ def sooniData():
     text = ''
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
     for index, row in df.iterrows():
-        if row['Message_1'] != "" or row['Message_2'] != "" or row['Message_3'] != "":
+        mg1 = row['Message_1']
+        mg2 = row['Message_2']
+        mg3 = row['Message_3']
+        if pd.isna(mg1) == False:
             dateNum = int(row['Time'][9:11])
-        sooniList[dateNum] += 1
-        text =  text + ' ' + row['Message_1']
+            sooniList[dateNum] += 1
+            text += mg1
+        if pd.isna(mg2) == False:
+            dateNum = int(row['Time'][9:11])
+            sooniList[dateNum] += 1
+            text += mg2
+        if pd.isna(mg3) == False:
+            dateNum = int(row['Time'][9:11])
+            sooniList[dateNum] += 1
+            text += mg3
+            
+    twitter = Twitter()
+    sentences_tag = []
+    sentences_tag = twitter.pos(text)
+    
+    noun_adj_list = []
+    
+    for word, tag in sentences_tag:
+        if tag in ['Noun', 'Adjective']:
+            noun_adj_list.append(word)
+    
+    counts = Counter(noun_adj_list)
+    tags = counts.most_common(40)
+    
+    wc = WordCloud(font_path='malgun.ttf', background_color="white", max_font_size=60)
+    cloud = wc.generate_from_frequencies(dict(tags))
+    cloud.to_file('test.jpg')
+  
+def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1):
+    
+    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    
+    # 각 점수는 최대 100점. 가중치를 곱해서 총점을 가중평균
+    def getScoreAct():
+        total_act_num = 0
+        active_score=0
+        for index, row in df.iterrows():
+
+            total_act_num+=1
+
+            if row['Z'] == '부동':
+                active_score+=0
+            elif row['Z'] == '미동':
+                active_score += 0.33
+            elif row['Z'] == '활동':
+                active_score += 0.66
+            elif row['Z'] == '외출':
+                active_score += 0.66
+            elif row['Z'] == '매우 활동':
+                active_score += 1
+
+        ## 주 5일 이상 활동/외출 정도면 만점처리. 기본점수 있음
+        if (total_act_num!=0):
+            active_score/=(total_act_num*0.66)
+
+        return 50*(1+np.min([active_score,1]))
+
+    def getScoreEx(): 
+        
+        ## 운동횟수 합산
+        act_num=0
+        for index, row in df.iterrows():
+            if (row['State'] == '실외운동하기') or (row['State'] == '실내운동하기'):
+                act_num+=1
+        
+        #주 5일 이상 운동시 만점처리. 기본점수 있음.
+        act_num=1.4*act_num/31
+
+        return 50*(1+np.min([act_num,1]))
+
+    def getScoreReg():
+        return 100
+    def getScoreSlp():
+
+        sleepList_score = [0 for i in range(32)]
+        
+        for index, row in df.iterrows():
+            if row['Act'] == '취침':
+                dateNum = int(row['Time'][9:11])
+                defaulttime=0
+                if int(row['Time'][12:14])<=8: ## 오전 8시 59분 59초 까지 잔 것은 전날 잔 것처럼 처리
+                    dateNum -= 1
+                    defaulttime=24
+                sleepList_score[dateNum] = (int(row['Time'][12:14])+defaulttime) * 60 + int(row['Time'][15:17])   
+
+        new_sleeplist = []
+        for item in sleepList_score:
+            if item!=0:
+                new_sleeplist.append(item)
+
+        if len(new_sleeplist)<10: # 수면 횟수 10회 이하는 분석 제외
+            return 50
+        
+        mystd = np.std(new_sleeplist)
+        #표준편차가 30분 이내이면 만점 처리.
+        if mystd==0:
+            mystd=1
+
+        return 50*(1+np.min([1,30/mystd]))
+
+    def getScoreMeal():
+        mealList_score=[[0]*3 for _ in range(32)]
+        for index, row in df.iterrows():
+            dateNum = int(row['Time'][9:11])
+            if row['State'] == '조식':
+                mealList_score[dateNum][0] = int(row['Time'][12:14]) * 60 + int(row['Time'][15:17])
+            elif row['State'] == '중식':
+                mealList_score[dateNum][1] = int(row['Time'][12:14]) * 60 + int(row['Time'][15:17])    
+            elif row['State'] == '석식':
+                mealList_score[dateNum][2] = int(row['Time'][12:14]) * 60 + int(row['Time'][15:17])
+
+        # 2회 이상 식사했는지 (50%) + 정해진 시간에 식사했는지 (50%)
+
+        goodMealTimeNum=0
+        morethan2Meals=0
+
+        for i in range(1,32):
+            dayMealNum=0
+            i0=mealList_score[i][0]
+            i1=mealList_score[i][1]
+            i2=mealList_score[i][2]
+            if i0!=0:
+                dayMealNum+=1
+                if (360<i0<540):
+                    goodMealTimeNum+=1
+            if i1!=0:
+                dayMealNum+=1
+                if (660<i0<780):
+                    goodMealTimeNum+=1
+            if i2!=0:
+                dayMealNum+=1
+                if (1020<i0<1200):
+                    goodMealTimeNum+=1
+            if dayMealNum>=2:
+                morethan2Meals+=1
+                
+        return 50*(morethan2Meals/31)+50*(goodMealTimeNum/(31*3))
+            
+
+    def getScoreSooni():
+        sooniTalkNum=0
+        for index, row in df.iterrows():
+            if row['Message_1'] != "" or row['Message_2'] != "" or row['Message_3'] != "":
+                sooniTalkNum+=1
+        # 10회 이상 대화시 만점
+        return 50*(1+np.min([1,sooniTalkNum/10]))
+
+    w_sum = w_active+w_exercise+w_regular+w_sleep+w_meal+w_sooni
+    score = w_active*getScoreAct()+w_exercise*getScoreEx()+w_regular*getScoreReg()
+    score += w_sleep*getScoreSlp()+w_meal*getScoreMeal()+w_sooni*getScoreSooni()
+    score /= w_sum
+    
+    global fullArr
+    fullArr = []
+    fullArr.append(round(w_active*getScoreAct()/w_sum, 2))
+    fullArr.append(round(w_exercise*getScoreEx()/w_sum, 2))
+    fullArr.append(round(w_regular*getScoreReg()/w_sum, 2))
+    fullArr.append(round(w_sleep*getScoreSlp()/w_sum, 2))
+    fullArr.append(round(w_meal*getScoreMeal()/w_sum, 2))
+    fullArr.append(round(w_sooni*getScoreSooni()/w_sum, 2))
+    
+    arrRound = np.round([score])
+    
+    return arrRound[0]; # 정수로 점수로 제한.   
 
 def details1(request):
-    
     return render(request, 'details1.html', {'graph': graph, 'graph2': graph2})
 
 def details2(request):
-    
     return render(request, 'details2.html', {'actGraph' : actGraph})
 
 def details3(request):
-    
     return render(request, 'details3.html', {'actGraph' : actGraph})
 
 def details4(request):
-    
     return render(request, 'details4.html', {'sleepGraph' : sleepGraph})
 
 def details5(request):
-    
     return render(request, 'details5.html', {'mealGraph' : mealGraph})
+
+def details6(request):
+    return render(request, 'details6.html', {'mealGraph' : mealGraph})
