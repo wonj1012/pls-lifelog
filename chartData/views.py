@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import datetime as dt
 import time
+import os
 
 # 해당 id의 data 분석
 def checkData(request):
@@ -128,42 +129,40 @@ def regularData():
     # z에서 '약', act에서 '용변' 검색 가능
     # 만약 '약', '용변' 횟수가 0회라면 아예 분석 x => 규칙성 점수 0점 처리
     
+    preprocess()
+    
     # csv 파일 dataframe 객체로 읽어오기
-    df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    try:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
+    except FileNotFoundError:
+        df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1356.csv', encoding='ANSI')
+        
+    global toilet_times, toilet_times_sec, toilet_times_time_sec    
+
     toilet_times = []
     toilet_times_sec = []
+    toilet_times_time_sec = []
 
     # 용변 시간 리스트에 저장
     for index, row in df.iterrows():
         if ('용변' in row['Act']):
-            ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+            try:
+                ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+            except IndexError:
+                return -1
             if (ttime not in toilet_times):
                 toilet_times.append(ttime)
                 toilet_times_sec.append(time.mktime(ttime.timetuple()))
+                toilet_times_time_sec.append(ttime.time().hour * 3600 + ttime.time().minute * 60 + ttime.time().second)
         end_index = index
 
-    # 기록된 첫 시간, 마지막 시간
-    start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
-    end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
-    # 일 평균 용변 횟수
-    average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
-    # print(round(average_toilet_time, 4))
-    # 용변 표준편차
-    std_toilet_time = np.std(toilet_times_sec)
-    # print(std_toilet_time)
+    # 데이터 시작 시간, 끝 시간
+    try:
+        start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
+        end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
+    except IndexError:
+        return -1
 
-    # # index: 용변 시간 column: 용변 횟수 dataframe 형성
-    # temp = start_time.date()
-    # times_list = []
-    # while (temp != end_time.date()):
-    #     times_list.append(temp)
-    #     temp += dt.timedelta(days=1)
-    # times_list.append(temp)
-    # toilet_times_df = pd.DataFrame({'times': 0}, index=times_list)
-    # for t in toilet_times:
-    #     toilet_times_df['times'][t.date()] += 1
-    # print(toilet_times_df)
-    # {용변 시간: 용변 횟수} dictionary 생성
     toilet_times_dict = {}
     temp = start_time.date()
     while (temp != end_time.date()):
@@ -173,16 +172,42 @@ def regularData():
     for t in toilet_times:
         toilet_times_dict[t.date()] += 1
 
+    global toilet_fig, toilet_timezone_fig, toiletGraph, toiletGraph2
+
     toilet_data = go.Scatter(x=list(toilet_times_dict.keys()), y=list(toilet_times_dict.values()))
     toilet_fig = go.Figure()
     toilet_fig.add_trace(toilet_data)
 
-    # 새벽 용변 횟수
-    dusk_toilet_times = []
+    # 시간대별 용변 
+    # toilet_timezone[0], [1], [2], [3] = 0~6시, 6~12시, 12시~18시, 18시~24시
+    toilet_timezone = [0, 0, 0, 0] 
     for t in toilet_times:
-        if (dt.time(0, 0, 0) <= t.time() <= dt.time(6, 0, 0)):
-            dusk_toilet_times.append(t)
-    print(dusk_toilet_times)
+        # 새벽
+        if (dt.time(0, 0, 0) <= t.time() < dt.time(6, 0, 0)):
+            toilet_timezone[0] += 1
+        # 아침
+        elif (dt.time(6, 0, 0) <= t.time() < dt.time(12, 0, 0)):
+            toilet_timezone[1] += 1
+        # 점심
+        elif (dt.time(12, 0, 0) <= t.time() < dt.time(18, 0, 0)):
+            toilet_timezone[2] += 1
+        # 저녁
+        else:
+            toilet_timezone[3] += 1
+    toilet_timezone_data = go.Scatter(x=['새벽 (0시 ~ 6시)', '아침 (6시 ~ 12시)', '점심 (12시 ~ 18시)', '저녁 (18시 ~ 24시)'], y=toilet_timezone)
+    toilet_timezone_fig = go.Figure()
+    toilet_timezone_fig.add_trace(toilet_timezone_data)
+
+    toiletGraph = toilet_fig.to_html(full_html=False, default_height=500, default_width=700)
+    toiletGraph2 = toilet_timezone_fig.to_html(full_html=False, default_height=500, default_width=700)
+
+    # 일 평균 용변 횟수
+    global average_toilet_time, score
+    
+    try:
+        average_toilet_time = len(toilet_times) / (end_time.date() - start_time.date()).days
+    except ZeroDivisionError:
+        average_toilet_time = 0
 
 def sleepData():
     # 4. 수면시간 분석하기
@@ -380,7 +405,6 @@ def sooniData():
     fig5.add_trace(go.Scatter(x=x_data[0], y=y_data[0], mode='lines', line_shape='spline', connectgaps=True,))
     sooniGraph = fig5.to_html(full_html=False, default_height=500, default_width=700)
             
-  
 def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1):
     
     df = pd.read_csv('hs_g73_m08/hs_' + user_id + '_m08_0903_1355.csv', encoding='ANSI')
@@ -424,7 +448,20 @@ def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1)
         return 50*(1+np.min([act_num,1]))
 
     def getScoreReg():
-        return 100
+        
+        global score
+        # 표준편차 등수 확인
+        rank_df = pd.read_csv('toilet_rank.csv', index_col=0)
+        for index, row in rank_df.iterrows():
+            if(index == int(user_id)):
+                score = (row['rank']) # 점수
+                rank_found = True
+                break
+        if (not rank_found):
+            score = 0 # No data
+            
+        return score
+    
     def getScoreSlp():
 
         sleepList_score = [0 for i in range(32)]
@@ -523,24 +560,48 @@ def details1(request):
 
 def details2(request):
     actZeroNum = 0
+    actNum = 0
     for i in range(0, 5):
         if actNumWeek[i] == 0:
             actZeroNum += 1
+        else:
+            actNum += actNumWeek[i]
     
     actText = ''
     if actZeroNum == 0:
-        actText = '이용자님은 매주 꾸준히 운동을 하셨네요!'
+        actText = '매주 꾸준히 운동을 하셨네요!'
     elif actZeroNum < 3:
         actText = '조금만 더 주간 운동량을 늘려주세요!'
     elif actZeroNum < 5:
         actText = '운동량이 너무 적어요!'
     elif actZeroNum == 5:
         actText = '한 달 동안 운동을 쉬시면 건강에 좋지 않답니다.'
+        
+    path = './hs_g73_m08/'
+    file_list = os.listdir(path)
+    file_list_py = [file for file in file_list if file.endswith('.csv')]
+    fullSum = 0
     
-    return render(request, 'details2.html', {'actGraph' : actGraph, 'actZeroNum': actZeroNum, 'actText': actText})
+    for i in file_list_py:
+        df = pd.read_csv(path + i, encoding='ANSI')
+        for index, row in df.iterrows():
+            if (row['State'] == '실외운동하기') or (row['State'] == '실내운동하기'):
+                fullSum += 1
+    
+    actAvg = round(fullSum / 170, 2)
+    actText2 = ''
+    exSub = 0
+    if actNum - actAvg < 0:
+        actSub = int(actAvg - actNum)
+        actText2 = '회 적습니다.'
+    else:
+        actSub = int(actNum - actAvg)
+        actText2 = '회 많습니다.'
+    
+    return render(request, 'details2.html', {'actGraph' : actGraph, 'actZeroNum': actZeroNum, 'actText': actText, 'actNum': actNum, 'actAvg': actAvg, 'actText2': actText2, 'actSub': actSub})
 
 def details3(request):
-    return render(request, 'details3.html', {'actGraph' : actGraph})
+    return render(request, 'details3.html', {'toiletGraph' : toiletGraph, 'toiletGraph2': toiletGraph2, 'average_toilet_time': average_toilet_time, 'score': score})
 
 def details4(request):
     sleepLateNum = 0
@@ -561,13 +622,34 @@ def details4(request):
     return render(request, 'details4.html', {'sleepGraph' : sleepGraph, 'sleepText': sleepText, 'sleepLateNum': sleepLateNum})
 
 def details5(request):
-    return render(request, 'details5.html', {'mealGraph' : mealGraph})
+    
+    mealFastSlow = [0, 0, 0, 0, 0, 0]
+    
+    for i in range(1, 31):
+        if mealList[i][2] == -1:
+            mealFastSlow[0] += 1
+        elif mealList[i][2] == 1:
+            mealFastSlow[1] += 1
+        if mealList[i][5] == -1:
+            mealFastSlow[2] += 1
+        elif mealList[i][5] == 1:
+            mealFastSlow[3] += 1
+        if mealList[i][8] == -1:
+            mealFastSlow[4] += 1
+        elif mealList[i][8] == 1:
+            mealFastSlow[5] += 1
+    
+    return render(request, 'details5.html', {'mealGraph' : mealGraph, 'mealFastSlow': mealFastSlow})
 
 def details6(request):
+
     sooniZeroNum = 0
+    sooniNum = 0
     for i in range(0, 31):
         if sooniList[i] == 0:
             sooniZeroNum += 1
+        else:
+            sooniNum += 1
     
     sooniText = ''
     if sooniZeroNum == 0:
@@ -579,4 +661,104 @@ def details6(request):
     else:
         sooniText = '한 번도 순이와 대화하지 않으셨네요! 인공지능 대화 서비스 순이와 대화 해보세요!'
         
-    return render(request, 'details6.html', {'sooniGraph' : sooniGraph, 'sooniText': sooniText, 'sooniZeroNum': sooniZeroNum})
+    path = './hs_g73_m08/'
+    file_list = os.listdir(path)
+    file_list_py = [file for file in file_list if file.endswith('.csv')]
+    fullSum = 0
+    
+    for i in file_list_py:
+        df = pd.read_csv(path + i, encoding='ANSI')
+        for index, row in df.iterrows():
+            mg1 = row['Message_1']
+            mg2 = row['Message_2']
+            mg3 = row['Message_3']
+            if pd.isna(mg1) == False:
+                fullSum += 1
+            if pd.isna(mg2) == False:
+                fullSum += 1
+            if pd.isna(mg3) == False:
+                fullSum += 1
+    
+    sooniAvg = round(fullSum / 170, 2) 
+    sooniText2 = ''
+    sooniSub = 0
+    if sooniNum - sooniAvg < 0:
+        sooniSub = int(sooniAvg - sooniNum)
+        sooniText2 = '회 적습니다.'
+    else:
+        sooniSub = int(sooniNum - sooniAvg)
+        sooniText2 = '회 많습니다.'
+    
+        
+    return render(request, 'details6.html', {'sooniGraph' : sooniGraph, 'sooniText': sooniText, 'sooniZeroNum': sooniZeroNum, 'sooniNum': sooniNum, 'sooniAvg': sooniAvg, 'sooniSub': sooniSub, 'sooniText2': sooniText2})
+
+def preprocess():
+    # 전체 이용자 분석
+    profile_df = pd.read_csv('user_profile.csv')
+    t_time_std_list = []
+    t_time_std_inday_list = []
+    for index, row in profile_df.iterrows():
+        u_id = str(row['user_id'])
+        try:
+            df = pd.read_csv('hs_g73_m08/hs_' + u_id + '_m08_0903_1355.csv', encoding='ANSI')
+        except FileNotFoundError:
+            df = pd.read_csv('hs_g73_m08/hs_' + u_id + '_m08_0903_1356.csv', encoding='ANSI')
+        t_times = [] # 용변 시간 리스트
+        t_times_sec = [] # 용변 시간 초로 변환한 리스트
+        t_times_time_sec = [] # 용변 시간 날짜 제외하고 초로 변환한 리스트
+        # print(u_id)
+        for index, row in df.iterrows():
+            if ('용변' in row['Act']):
+                try:
+                    ttime = dt.datetime.strptime(row['Time'], '\'%Y-%m-%d %H:%M:%S')
+                except IndexError:
+                    break
+                if (ttime not in t_times):
+                    t_times.append(ttime)
+                    t_times_sec.append(time.mktime(ttime.timetuple()))
+                    t_times_time_sec.append(ttime.time().hour * 3600 + ttime.time().minute * 60 + ttime.time().second)
+            end_index = index
+
+        try:
+            # 데이터 시작 시간, 끝 시간
+            start_time = dt.datetime.strptime(df['Time'][0], '\'%Y-%m-%d %H:%M:%S')
+            end_time = dt.datetime.strptime(df['Time'][end_index], '\'%Y-%m-%d %H:%M:%S')
+            # 일 평균 용변 횟수
+            average_t_time = len(t_times) / (end_time.date() - start_time.date()).days
+            # print(round(average_toilet_time, 4))
+            # 용변시간 표준편차
+            t_time_std = np.std(t_times_sec)
+            # 일중 용변시간 표준편차
+            t_time_inday_std = np.std(t_times_time_sec)
+            # print(t_time_std, t_time_inday_std)
+            if (not np.isnan(t_time_std) and not np.isnan(t_time_inday_std)):
+                t_time_std_list.append((t_time_std, u_id))
+                t_time_std_inday_list.append((t_time_inday_std, u_id))
+        except IndexError:
+            continue
+        except ZeroDivisionError:
+            continue
+        except RuntimeError:
+            continue
+    std_sorted = sorted(t_time_std_list)
+    std_idx = []
+    for i in t_time_std_list:
+        std_idx.append(std_sorted.index(i))
+    std_rank = {}
+    for i in t_time_std_list:
+        std_rank[i[1]] = std_idx[t_time_std_list.index(i)] / len(t_time_std_list) * 100
+
+    std_inday_sorted = sorted(t_time_std_inday_list)
+    std_inday_idx = []
+    for i in t_time_std_inday_list:
+        std_inday_idx.append(std_inday_sorted.index(i))
+    std_inday_rank = {}
+    for i in t_time_std_inday_list:
+        std_inday_rank[i[1]] = std_inday_idx[t_time_std_inday_list.index(i)] / len(t_time_std_inday_list) * 100
+
+    total_std_rank = {}
+    for i, j in std_inday_rank.items():
+        total_std_rank[i] = round((j + std_inday_rank[i]) / 2, 2)
+    df_std = pd.DataFrame(total_std_rank, index=['rank'])
+    df_std = df_std.transpose()
+    df_std.to_csv('toilet_rank.csv')
