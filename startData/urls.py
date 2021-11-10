@@ -4,6 +4,5 @@ from chartData import views as v2
 from . import views
 
 urlpatterns = [
-    path('checkID', v1.checkID),
-    path('startData/checkData', v2.checkData)
+    path('checkID', v1.checkID)
 ]

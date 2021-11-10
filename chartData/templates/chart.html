@@ -7,23 +7,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src='https://cdn.plot.ly/plotly-2.4.2.min.js'></script>
     <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'chart.css' %}"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!--<div><img src="data:image/png;base64,{{data}}"></div>-->
-    <div id='list'>{{newList2}}</div>
-    <input type='hidden' id='check2' name='check' value='{{ zList }}'>
-    <div id='check'></div>
-    <div>helloworld</div>
-    {% if graph %}
-    {{ graph|safe }}
-    {% else %}
-    <p> No!!!!!!!!!!!!!!! </p>
-    {% endif %}
-    
-    {% if actGraph %}
-    {{ actGraph|safe }}
-    {% else %}
-    <p> No!!!!!!!!!!!!!!! </p>
-    {% endif %}
+    <div id='name'>{{user_id}}님의 8월 점수입니다</div>
+    <div id='wait'>자세한 분석 결과는 버튼을 눌러주세요</div>
+    <div id='score'>{{fullScore}}점</div>
+    <div class='bigScore'>
+        <div class='smallText'>1. 활동</div>
+        <div class='smallScore'>{{fullArr.0}}점</div>
+        <div class="bt">
+            <form action="/chartData/details1" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
+    <div class='bigScore'>
+        <div class='smallText'>2. 운동</div>
+        <div class='smallScore'>{{fullArr.1}}점</div>
+        <div class="bt">
+            <form action="/chartData/details2" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
+    <div class='bigScore'>
+        <div class='smallText'>3. 규칙성</div>
+        <div class='smallScore'>{{fullArr.2}}점</div>
+            <div class="bt">
+            <form action="/chartData/details3" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
+    <div class='bigScore'>
+        <div class='smallText'>4. 수면</div>
+        <div class='smallScore'>{{fullArr.3}}점</div>
+        <div class="bt">
+            <form action="/chartData/details4" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
+    <div class='bigScore'>
+        <div class='smallText'>5. 식사</div>
+        <div class='smallScore'>{{fullArr.4}}점</div>
+        <div class="bt">
+            <form action="/chartData/details5" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
+    <div class='bigScore'>
+        <div class='smallText'>6. 순이</div>
+        <div class='smallScore'>{{fullArr.5}}점</div>
+        <div class="bt">
+            <form action="/chartData/details6" method="get">
+                <input type="submit" value="분석하기">
+            </form>
+        </div>
+    </div>
 </body>
 </html>
