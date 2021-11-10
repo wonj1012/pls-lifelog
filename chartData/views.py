@@ -450,6 +450,7 @@ def getScore(w_active=1,w_exercise=1,w_regular=1,w_sleep=1,w_meal=1,w_sooni=0.1)
     def getScoreReg():
         
         global score
+        rank_found = False
         # 표준편차 등수 확인
         rank_df = pd.read_csv('toilet_rank.csv', index_col=0)
         for index, row in rank_df.iterrows():
@@ -645,11 +646,11 @@ def details6(request):
 
     sooniZeroNum = 0
     sooniNum = 0
-    for i in range(0, 31):
+    for i in range(1, 31):
         if sooniList[i] == 0:
             sooniZeroNum += 1
         else:
-            sooniNum += 1
+            sooniNum += sooniList[i]
     
     sooniText = ''
     if sooniZeroNum == 0:
